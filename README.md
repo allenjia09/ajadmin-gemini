@@ -1,13 +1,3 @@
-# v3b
-
-This template should help get you started developing with Vue 3 in Vite.
-
-## Recommended IDE Setup
-
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
-
-## Recommended Browser Setup
-
 # AJ-Admin-Gemini 🚀
 
 一个基于 **Vue 3**、**Vite** 和 **Naive UI** 构建的现代化智能后台管理系统。

@@ -22,15 +22,20 @@ const router = useRouter()
 const authStore = useAuthStore()
 const projectStore = useProjectStore()
 
-function renderIcon(icon: Component) {
-  return () => h(NIcon, null, { default: () => h(icon) })
-}
+import { CompassOutline } from '@vicons/ionicons5'
+
+const renderIcon = (icon: any) => () => h(NIcon, null, { default: () => h(icon) })
 
 const menuOptions = computed<MenuOption[]>(() => {
   const options: MenuOption[] = [
     {
       label: () => h(RouterLink, { to: '/admin/custom' }, { default: () => '模块管理' }),
       key: 'custom-module',
+    },
+    {
+      label: () => h(RouterLink, { to: '/admin/astrolabe' }, { default: () => '星盘查询' }),
+      key: 'astrolabe',
+      icon: renderIcon(CompassOutline),
     },
   ]
 

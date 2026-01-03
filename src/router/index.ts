@@ -4,6 +4,7 @@ import Register from '../views/Register.vue'
 import AdminLayout from '../layouts/AdminLayout.vue'
 import CustomModules from '../views/CustomModules.vue'
 import DynamicProject from '../views/DynamicProject.vue'
+import Astrolabe from '../views/Astrolabe.vue'
 import { useAuthStore } from '../stores/auth'
 
 const router = createRouter({
@@ -41,6 +42,11 @@ const router = createRouter({
           path: 'project/:id',
           name: 'project-detail',
           component: DynamicProject,
+        },
+        {
+          path: 'astrolabe',
+          name: 'astrolabe',
+          component: Astrolabe,
         },
       ],
     },

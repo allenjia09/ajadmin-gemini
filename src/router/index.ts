@@ -4,7 +4,8 @@ import Register from '../views/Register.vue'
 import AdminLayout from '../layouts/AdminLayout.vue'
 import CustomModules from '../views/CustomModules.vue'
 import DynamicProject from '../views/DynamicProject.vue'
-import Astrolabe from '../views/Astrolabe.vue'
+import Welcome from '../views/Welcome.vue'
+import Bazi from '../views/Bazi.vue'
 import { useAuthStore } from '../stores/auth'
 
 const router = createRouter({
@@ -31,7 +32,12 @@ const router = createRouter({
       children: [
         {
           path: '',
-          redirect: '/admin/custom',
+          redirect: '/admin/welcome',
+        },
+        {
+          path: 'welcome',
+          name: 'welcome',
+          component: Welcome,
         },
         {
           path: 'custom',
@@ -44,9 +50,9 @@ const router = createRouter({
           component: DynamicProject,
         },
         {
-          path: 'astrolabe',
-          name: 'astrolabe',
-          component: Astrolabe,
+          path: 'bazi',
+          name: 'bazi',
+          component: Bazi,
         },
       ],
     },

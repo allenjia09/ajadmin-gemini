@@ -1,49 +1,66 @@
 <script setup lang="ts">
-import { ref, computed, h } from 'vue'
+import { ref, computed, watch, onMounted, h } from 'vue'
 import { useRoute } from 'vue-router'
 import {
+  NCard,
   NDataTable,
   NButton,
   NSpace,
-  useMessage,
   NModal,
   NForm,
   NFormItem,
   NInput,
-  NInputNumber,
   NDatePicker,
+  NInputNumber,
   NSelect,
+  useMessage,
   NTag,
-  NStatistic,
-  NNumberAnimation,
   NGrid,
   NGridItem,
-  NCard,
+  NStatistic,
+  NNumberAnimation,
+  NSpin,
 } from 'naive-ui'
-import { useProjectStore } from '../stores/project'
+import { useProjectStore } from '@/stores/project'
 
 const route = useRoute()
-const projectStore = useProjectStore()
 const message = useMessage()
-
-const projectId = computed(() => route.params.id as string)
-const project = computed(() => projectStore.projects.find((p) => p.id === projectId.value))
+const projectStore = useProjectStore()
 
 const showModal = ref(false)
 const modalTitle = ref('')
-const editKey = ref<string | null>(null)
+const editingKey = ref<string | null>(null)
 const formData = ref<any>({})
+const loadingData = ref(false)
+const submitting = ref(false)
+
+const projectId = computed(() => route.params.id as string)
+
+const currentProject = computed(() => projectStore.projects.find((p) => p.id === projectId.value))
+
+// 数据初始化
+const initData = async () => {
+  if (projectId.value) {
+    loadingData.value = true
+    await projectStore.loadProjectData(projectId.value)
+    loadingData.value = false
+  }
+}
+
+onMounted(initData)
+watch(projectId, initData)
 
 const computeValue = (row: any, field: any) => {
   if (!field.formula) return 0
   let formula = field.formula
-  project.value?.fields.forEach((f) => {
+  currentProject.value?.fields.forEach((f) => {
     if (f.alias && formula.includes(`[${f.alias}]`)) {
       const value = row[f.key] || 0
       formula = formula.replace(new RegExp(`\\[${f.alias}\\]`, 'g'), value.toString())
     }
   })
   try {
+    // eslint-disable-next-line no-eval
     return eval(formula) || 0
   } catch (e) {
     return 0
@@ -51,15 +68,14 @@ const computeValue = (row: any, field: any) => {
 }
 
 const summaryData = computed(() => {
-  if (!project.value || project.value.data.length === 0) return []
+  if (!currentProject.value || currentProject.value.data.length === 0) return []
 
   const results: { label: string; value: number }[] = []
 
-  // 找出所有需要汇总的字段（数字或计算）
-  project.value.fields.forEach((f) => {
+  currentProject.value.fields.forEach((f) => {
     if (f.type === 'number' || f.type === 'compute') {
       let sum = 0
-      project.value?.data.forEach((row) => {
+      currentProject.value?.data.forEach((row) => {
         if (f.type === 'number') {
           sum += Number(row[f.key] || 0)
         } else {
@@ -74,9 +90,9 @@ const summaryData = computed(() => {
 })
 
 const columns = computed(() => {
-  if (!project.value) return []
+  if (!currentProject.value) return []
 
-  const cols: any[] = project.value.fields.map((field) => ({
+  const cols: any[] = currentProject.value.fields.map((field) => ({
     title: field.name,
     key: field.key,
     render: (row: any) => {
@@ -118,7 +134,7 @@ const columns = computed(() => {
               {
                 type: 'error',
                 size: 'small',
-                onClick: () => projectStore.deleteDataRow(projectId.value, row.key),
+                onClick: () => handleDelete(row.key),
               },
               { default: () => '删除' },
             ),
@@ -131,46 +147,61 @@ const columns = computed(() => {
 })
 
 const openAddModal = () => {
-  modalTitle.value = '新增' + project.value?.name
-  editKey.value = null
+  modalTitle.value = '新增' + currentProject.value?.name
+  editingKey.value = null
   formData.value = {}
   showModal.value = true
 }
 
 const openEditModal = (row: any) => {
-  modalTitle.value = '编辑' + project.value?.name
-  editKey.value = row.key
+  modalTitle.value = '编辑' + currentProject.value?.name
+  editingKey.value = row.key
   formData.value = { ...row }
   showModal.value = true
 }
 
-const handleConfirm = () => {
-  // 简易必填校验
-  if (project.value) {
-    for (const field of project.value.fields) {
-      if (field.required && !formData.value[field.key]) {
-        message.error(`请输入${field.name}`)
-        return
-      }
+const handleSubmit = async () => {
+  if (!currentProject.value) return
+
+  // 校验
+  for (const field of currentProject.value.fields) {
+    if (field.required && !formData.value[field.key]) {
+      message.error(`请输入${field.name}`)
+      return
     }
   }
 
-  if (editKey.value) {
-    projectStore.updateDataRow(projectId.value, editKey.value, formData.value)
-    message.success('更新成功')
-  } else {
-    projectStore.addDataRow(projectId.value, formData.value)
-    message.success('添加成功')
+  submitting.value = true
+  try {
+    if (editingKey.value) {
+      await projectStore.updateDataRow(projectId.value, editingKey.value, formData.value)
+      message.success('更新成功')
+    } else {
+      await projectStore.addDataRow(projectId.value, formData.value)
+      message.success('添加成功')
+    }
+    showModal.value = false
+  } catch (err) {
+    message.error('操作失败')
+  } finally {
+    submitting.value = false
   }
-  showModal.value = false
+}
+
+const handleDelete = async (rowKey: string) => {
+  try {
+    await projectStore.deleteDataRow(projectId.value, rowKey)
+    message.success('删除成功')
+  } catch (err) {
+    message.error('删除失败')
+  }
 }
 
 const getReadableFormula = (formula: string) => {
   if (!formula) return ''
   let readable = formula
-  project.value?.fields.forEach((f) => {
+  currentProject.value?.fields.forEach((f) => {
     if (f.alias && readable.includes(`[${f.alias}]`)) {
-      // 替换为纯名称，不带中括号
       readable = readable.replace(new RegExp(`\\[${f.alias}\\]`, 'g'), f.name)
     }
   })
@@ -179,69 +210,79 @@ const getReadableFormula = (formula: string) => {
 </script>
 
 <template>
-  <div v-if="project">
-    <n-space justify="space-between" align="center" style="margin-bottom: 16px">
-      <h2>{{ project.name }} - 数据管理</h2>
-      <n-button type="primary" @click="openAddModal">新增数据</n-button>
-    </n-space>
+  <div v-if="currentProject">
+    <div v-if="loadingData" style="padding: 50px; text-align: center">
+      <n-spin size="large" description="正在同步数据..." />
+    </div>
 
-    <!-- 数据汇总看板 -->
-    <n-grid :cols="4" :x-gap="12" style="margin-bottom: 24px">
-      <n-grid-item v-for="item in summaryData" :key="item.label">
-        <n-card embedded :bordered="false">
-          <n-statistic :label="item.label">
-            <n-number-animation :from="0" :to="item.value" :precision="2" />
-          </n-statistic>
-        </n-card>
-      </n-grid-item>
-    </n-grid>
+    <div v-else>
+      <n-space justify="space-between" align="center" style="margin-bottom: 16px">
+        <h2>{{ currentProject.name }} - 数据管理</h2>
+        <n-button type="primary" @click="openAddModal">新增数据</n-button>
+      </n-space>
 
-    <n-data-table :columns="columns" :data="project.data" />
+      <!-- 数据汇总看板 -->
+      <n-grid :cols="4" :x-gap="12" style="margin-bottom: 24px">
+        <n-grid-item v-for="item in summaryData" :key="item.label">
+          <n-card embedded :bordered="false">
+            <n-statistic :label="item.label">
+              <n-number-animation :from="0" :to="item.value" :precision="2" />
+            </n-statistic>
+          </n-card>
+        </n-grid-item>
+      </n-grid>
 
-    <n-modal v-model:show="showModal" preset="card" :title="modalTitle" style="width: 500px">
-      <n-form>
-        <n-form-item
-          v-for="field in project.fields"
-          :key="field.key"
-          :label="field.name"
-          :required="field.required"
-        >
-          <template v-if="field.type === 'number'">
-            <n-input-number
-              v-model:value="formData[field.key]"
-              style="width: 100%"
-              placeholder="请输入数字"
-            />
-          </template>
-          <template v-else-if="field.type === 'date'">
-            <n-date-picker v-model:value="formData[field.key]" type="date" style="width: 100%" />
-          </template>
-          <template v-else-if="field.type === 'select'">
-            <n-select
-              v-model:value="formData[field.key]"
-              :options="field.options?.map((o) => ({ label: o, value: o }))"
-              placeholder="请选择"
-            />
-          </template>
-          <template v-else-if="field.type === 'compute'">
-            <div style="color: #666; font-style: italic">
-              该字段将根据公式 [{{ getReadableFormula(field.formula ?? '') }}] 自动计算
-            </div>
-          </template>
-          <template v-else>
-            <n-input v-model:value="formData[field.key]" :placeholder="'请输入' + field.name" />
-          </template>
-        </n-form-item>
-      </n-form>
-      <template #footer>
-        <n-space justify="end">
-          <n-button @click="showModal = false">取消</n-button>
-          <n-button type="primary" @click="handleConfirm">
-            {{ editKey ? '更新' : '提交' }}
-          </n-button>
-        </n-space>
-      </template>
-    </n-modal>
+      <n-data-table :columns="columns" :data="currentProject.data" />
+
+      <n-modal v-model:show="showModal" preset="card" :title="modalTitle" style="width: 500px">
+        <n-form :disabled="submitting">
+          <n-form-item
+            v-for="field in currentProject.fields"
+            :key="field.key"
+            :label="field.name"
+            :required="field.required"
+          >
+            <template v-if="field.type === 'number'">
+              <n-input-number
+                v-model:value="formData[field.key]"
+                style="width: 100%"
+                placeholder="请输入数字"
+              />
+            </template>
+            <template v-else-if="field.type === 'date'">
+              <n-date-picker v-model:value="formData[field.key]" type="date" style="width: 100%" />
+            </template>
+            <template v-else-if="field.type === 'select'">
+              <n-select
+                v-model:value="formData[field.key]"
+                :options="field.options?.map((o) => ({ label: o, value: o }))"
+                placeholder="请选择"
+              />
+            </template>
+            <template v-else-if="field.type === 'compute'">
+              <div style="color: #666; font-style: italic">
+                公式: [{{ getReadableFormula(field.formula ?? '') }}] (保存自动计算)
+              </div>
+            </template>
+            <template v-else>
+              <n-input v-model:value="formData[field.key]" :placeholder="'请输入' + field.name" />
+            </template>
+          </n-form-item>
+        </n-form>
+        <template #footer>
+          <n-space justify="end">
+            <n-button @click="showModal = false" :disabled="submitting">取消</n-button>
+            <n-button type="primary" @click="handleSubmit" :loading="submitting">
+              {{ editingKey ? '更新' : '提交' }}
+            </n-button>
+          </n-space>
+        </template>
+      </n-modal>
+    </div>
   </div>
-  <div v-else>项目不存在</div>
+  <div v-else>
+    <n-card style="text-align: center; margin-top: 50px">
+      <div style="color: #999; font-size: 16px">请在左侧选择一个模块进行管理</div>
+    </n-card>
+  </div>
 </template>

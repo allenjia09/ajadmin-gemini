@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { pb } from '@/lib/pocketbase'
 
 export interface ProjectField {
   name: string
@@ -7,8 +8,8 @@ export interface ProjectField {
   type: 'string' | 'date' | 'number' | 'select' | 'compute'
   required: boolean
   options?: string[]
-  alias?: string // 用于计算的标识，如 A, B
-  formula?: string // 计算公式，如 [A] + [B]
+  alias?: string
+  formula?: string
 }
 
 export interface Project {
@@ -19,92 +20,153 @@ export interface Project {
 }
 
 export const useProjectStore = defineStore('project', () => {
-  const projects = ref<Project[]>([
-    {
-      id: 'mock-1',
-      name: '员工管理',
-      fields: [
-        { name: '姓名', key: 'name', type: 'string', required: true },
-        {
-          name: '部门',
-          key: 'dept',
-          type: 'select',
-          required: true,
-          options: ['技术部', '市场部', '人事部', '财务部'],
-        },
-        { name: '入职日期', key: 'joinDate', type: 'date', required: false },
-        { name: '职级', key: 'level', type: 'number', required: false },
-      ],
-      data: [
-        { key: '1', name: '张三', dept: '技术部', joinDate: 1704230400000, level: 5 },
-        { key: '2', name: '李四', dept: '市场部', joinDate: 1704316800000, level: 3 },
-      ],
-    },
-    {
-      id: 'mock-2',
-      name: '工资管理',
-      fields: [
-        { name: '员工姓名', key: 'empName', type: 'string', required: true },
-        { name: '基本工资', key: 'baseSal', type: 'number', required: true, alias: 'S1' },
-        { name: '绩效奖金', key: 'bonus', type: 'number', required: true, alias: 'S2' },
-        { name: '总计', key: 'total', type: 'compute', required: false, formula: '[S1]+[S2]' },
-      ],
-      data: [
-        { key: '101', empName: '张三', baseSal: 15000, bonus: 3000 },
-        { key: '102', empName: '李四', baseSal: 12000, bonus: 2500 },
-      ],
-    },
-  ])
+  const projects = ref<Project[]>([])
+  const loading = ref(false)
 
-  function addProject(name: string, fields: ProjectField[]) {
-    const id = Date.now().toString()
-    projects.value.push({
-      id,
-      name,
-      fields,
-      data: [],
-    })
-    return id
-  }
-
-  function updateProject(id: string, name: string, fields: ProjectField[]) {
-    const project = projects.value.find((p) => p.id === id)
-    if (project) {
-      project.name = name
-      project.fields = fields
+  // 初始化：加载所有模块定义
+  async function loadProjects() {
+    loading.value = true
+    try {
+      const records = await pb.collection('modules').getFullList()
+      projects.value = records.map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        fields: r.fields || [],
+        data: [], // 数据后续按需加载
+      }))
+    } catch (err) {
+      console.error('Failed to load modules:', err)
+    } finally {
+      loading.value = false
     }
   }
 
-  function deleteProject(id: string) {
-    projects.value = projects.value.filter((p) => p.id !== id)
-  }
-
-  function addDataRow(projectId: string, row: any) {
+  // 加载指定模块的数据
+  async function loadProjectData(projectId: string) {
     const project = projects.value.find((p) => p.id === projectId)
-    if (project) {
-      project.data.push({ ...row, key: Date.now().toString() })
+    if (!project) return
+
+    try {
+      const records = await pb.collection('module_data').getFullList({
+        filter: `module="${projectId}"`,
+        sort: '-created',
+      })
+
+      // 映射 PB 记录到前端各行数据 (保留 PB ID 以便更新)
+      project.data = records.map((r: any) => ({
+        ...r.content,
+        key: r.id, // 使用 PB 的 ID 作为 key
+      }))
+    } catch (err) {
+      console.error('Failed to load module data:', err)
     }
   }
 
-  function updateDataRow(projectId: string, rowKey: string, updatedRow: any) {
-    const project = projects.value.find((p) => p.id === projectId)
-    if (project) {
-      const index = project.data.findIndex((r) => r.key === rowKey)
-      if (index !== -1) {
-        project.data[index] = { ...updatedRow, key: rowKey }
+  async function addProject(name: string, fields: ProjectField[]) {
+    try {
+      const record = await pb.collection('modules').create({
+        name,
+        fields,
+      })
+      projects.value.push({
+        id: record.id,
+        name: record.name,
+        fields: record.fields,
+        data: [],
+      })
+      return record.id
+    } catch (err) {
+      console.error('Create module failed:', err)
+      throw err
+    }
+  }
+
+  async function updateProject(id: string, name: string, fields: ProjectField[]) {
+    try {
+      const record = await pb.collection('modules').update(id, {
+        name,
+        fields,
+      })
+      const project = projects.value.find((p) => p.id === id)
+      if (project) {
+        project.name = record.name
+        project.fields = record.fields
       }
+    } catch (err) {
+      console.error('Update module failed:', err)
     }
   }
 
-  function deleteDataRow(projectId: string, rowKey: string) {
-    const project = projects.value.find((p) => p.id === projectId)
-    if (project) {
-      project.data = project.data.filter((r) => r.key !== rowKey)
+  async function deleteProject(id: string) {
+    try {
+      await pb.collection('modules').delete(id)
+      projects.value = projects.value.filter((p) => p.id !== id)
+    } catch (err) {
+      console.error('Delete module failed:', err)
+    }
+  }
+
+  async function addDataRow(projectId: string, row: any) {
+    try {
+      // row 包含 content，PB 中存 content 字段
+      // key 应该是临时生成的，无需传给 backend 的 content
+      const { key, ...content } = row
+
+      const record = await pb.collection('module_data').create({
+        module: projectId,
+        content: content,
+      })
+
+      const project = projects.value.find((p) => p.id === projectId)
+      if (project) {
+        project.data.push({
+          ...content,
+          key: record.id,
+        })
+      }
+    } catch (err) {
+      console.error('Add row failed:', err)
+    }
+  }
+
+  async function updateDataRow(projectId: string, rowKey: string, updatedRow: any) {
+    try {
+      const { key, ...content } = updatedRow
+      // rowKey 即 record.id
+      await pb.collection('module_data').update(rowKey, {
+        content: content,
+      })
+
+      const project = projects.value.find((p) => p.id === projectId)
+      if (project) {
+        const index = project.data.findIndex((r) => r.key === rowKey)
+        if (index !== -1) {
+          project.data[index] = { ...content, key: rowKey }
+        }
+      }
+    } catch (err) {
+      console.error('Update row failed:', err)
+    }
+  }
+
+  async function deleteDataRow(projectId: string, rowKey: string) {
+    try {
+      await pb.collection('module_data').delete(rowKey)
+
+      const project = projects.value.find((p) => p.id === projectId)
+      if (project) {
+        project.data = project.data.filter((r) => r.key !== rowKey)
+      }
+    } catch (err) {
+      console.error('Delete row failed:', err)
     }
   }
 
   return {
     projects,
+    loading,
+    loadProjects,
+    loadProjectData,
     addProject,
     updateProject,
     deleteProject,

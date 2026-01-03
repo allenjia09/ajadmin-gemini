@@ -2,25 +2,38 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { NCard, NForm, NFormItem, NInput, NButton, useMessage } from 'naive-ui'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const message = useMessage()
+const authStore = useAuthStore()
 
 const formValue = ref({
   username: '',
+  email: '',
   password: '',
   confirmPassword: '',
 })
 
-const handleRegister = (e: MouseEvent) => {
+const handleRegister = async (e: MouseEvent) => {
   e.preventDefault()
   if (formValue.value.password !== formValue.value.confirmPassword) {
     message.error('两次输入的密码不一致')
     return
   }
-  // Mock registration
-  message.success('注册成功！请登录。')
-  router.push('/login')
+
+  const { success, message: msg } = await authStore.register(
+    formValue.value.username,
+    formValue.value.email,
+    formValue.value.password,
+  )
+
+  if (success) {
+    message.success('注册成功！请登录。')
+    router.push('/login')
+  } else {
+    message.error('注册失败: ' + msg)
+  }
 }
 
 const goToLogin = () => {
@@ -30,10 +43,13 @@ const goToLogin = () => {
 
 <template>
   <div class="register-container">
-    <n-card title="创建管理员账号" style="width: 400px">
+    <n-card title="注册账号" style="width: 400px">
       <n-form :model="formValue">
         <n-form-item path="username" label="用户名">
           <n-input v-model:value="formValue.username" placeholder="请输入用户名" />
+        </n-form-item>
+        <n-form-item path="email" label="邮箱">
+          <n-input v-model:value="formValue.email" placeholder="请输入邮箱地址" />
         </n-form-item>
         <n-form-item path="password" label="密码">
           <n-input

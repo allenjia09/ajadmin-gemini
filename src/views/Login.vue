@@ -13,14 +13,19 @@ const formValue = ref({
   password: '',
 })
 
-const handleLogin = (e: MouseEvent) => {
+const handleLogin = async (e: MouseEvent) => {
   e.preventDefault()
-  if (formValue.value.username === 'admin' && formValue.value.password === 'admin') {
-    authStore.login(formValue.value.username)
+
+  const { success, message: msg } = await authStore.login(
+    formValue.value.username,
+    formValue.value.password,
+  )
+
+  if (success) {
     message.success('登录成功')
     router.push('/admin')
   } else {
-    message.error('账号或密码不正确')
+    message.error('登录失败: ' + (msg || '账号或密码不正确'))
   }
 }
 

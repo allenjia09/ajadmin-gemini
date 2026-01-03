@@ -8,35 +8,66 @@ This template should help get you started developing with Vue 3 in Vite.
 
 ## Recommended Browser Setup
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+# AJ-Admin-Gemini 🚀
 
-## Type Support for `.vue` Imports in TS
+一个基于 **Vue 3**、**Vite** 和 **Naive UI** 构建的现代化智能后台管理系统。
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+## ✨ 核心特性
 
-## Customize configuration
+- 🛠️ **全动态自定义模块**：无需编写代码即可在 UI 中创建、编辑和管理业务模块。
+- 📊 **智能数据汇总**：自动识别数字和计算字段，实时生成数据看板。
+- 🧮 **计算字段引擎**：支持通过自定义标识（Alias）编写数学公式，实现自动计算（如：利润 = 销售额 - 成本）。
+- 📝 **多种字段类型**：
+  - **文本 (String)**：基础文字录入。
+  - **数字 (Number)**：带统计功能的数值。
+  - **日期 (Date)**：集成日期选择组件。
+  - **下拉选择 (Select)**：支持动态配置选项。
+  - **计算属性 (Compute)**：实时公式解析与展示。
+- 🔐 **权限管理系统**：内置完善的登录/注册流及路由导航守卫。
+- 🎨 **极致交互体验**：基于 Naive UI，支持全中文化（zhCN）、动态动画以及优雅的响应式布局。
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+## 🛠️ 技术栈
 
-## Project Setup
+- **框架**: [Vue 3](https://vuejs.org/) (Composition API)
+- **构建工具**: [Vite](https://vitejs.dev/)
+- **UI 组件库**: [Naive UI](https://www.naiveui.com/)
+- **状态管理**: [Pinia](https://pinia.vuejs.org/)
+- **路由**: [Vue Router](https://router.vuejs.org/)
+- **语言**: [TypeScript](https://www.typescriptlang.org/)
 
-```sh
+## 🚀 快速开始
+
+### 安装依赖
+
+```bash
 bun install
+# 或者
+npm install
 ```
 
-### Compile and Hot-Reload for Development
+### 启动开发服务器
 
-```sh
+```bash
 bun dev
+# 或者
+npm run dev
 ```
 
-### Type-Check, Compile and Minify for Production
+### 默认账户
 
-```sh
-bun run build
-```
+- **用户名**: `admin`
+- **密码**: `admin`
+
+## 📸 功能说明
+
+### 自定义模块
+
+在“模块管理”中，您可以定义项目的名称、图标及其属性。每个属性都可以指定 ID（用于公式引用）和校验规则（如必填）。
+
+### 汇总统计
+
+在动态项目的数据详情页，顶部会自动展示该项目所有数值字段的合计值，采用动画效果增强视觉反馈。
+
+## 🤝 贡献
+
+欢迎提交 Issue 或 Pull Request 来完善这个项目！

@@ -162,8 +162,8 @@ import { h } from 'vue'
 <template>
   <div>
     <n-space justify="space-between" align="center" style="margin-bottom: 16px">
-      <h2>管理管理</h2>
-      <n-button type="primary" @click="openAddModal">新增项目</n-button>
+      <h2>模块定义与管理</h2>
+      <n-button type="info" @click="openAddModal">新增项目</n-button>
     </n-space>
 
     <n-data-table :columns="columns" :data="projectStore.projects" />

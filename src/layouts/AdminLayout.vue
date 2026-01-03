@@ -29,10 +29,6 @@ function renderIcon(icon: Component) {
 const menuOptions = computed<MenuOption[]>(() => {
   const options: MenuOption[] = [
     {
-      label: () => h(RouterLink, { to: '/admin/users' }, { default: () => '人员信息管理' }),
-      key: 'user-management',
-    },
-    {
       label: () => h(RouterLink, { to: '/admin/custom' }, { default: () => '模块管理' }),
       key: 'custom-module',
     },

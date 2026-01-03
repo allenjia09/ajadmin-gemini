@@ -2,7 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
 import AdminLayout from '../layouts/AdminLayout.vue'
-import UserManagement from '../views/UserManagement.vue'
 import CustomModules from '../views/CustomModules.vue'
 import DynamicProject from '../views/DynamicProject.vue'
 import { useAuthStore } from '../stores/auth'
@@ -31,12 +30,7 @@ const router = createRouter({
       children: [
         {
           path: '',
-          redirect: '/admin/users',
-        },
-        {
-          path: 'users',
-          name: 'users',
-          component: UserManagement,
+          redirect: '/admin/custom',
         },
         {
           path: 'custom',

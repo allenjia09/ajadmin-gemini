@@ -43,6 +43,13 @@ pnpm install
 pnpm dev
 ```
 
+### 单机版运行
+
+```bash
+cd backend
+pocketbase.exe serve
+```
+
 ### 账号配置
 
 请前往 PocketBase 控制台创建管理员账号，或直接在页面注册新用户。
